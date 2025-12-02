@@ -1,7 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactCompiler: true, 
+  experimental: {
+    turbopackFileSystemCacheForDev: true, 
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '5000', // Allows images from your backend port
+        pathname: '/uploads/**', // Matches your backend image path structure
+      },
+    ],
+  },
 };
 
 export default nextConfig;
