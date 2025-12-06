@@ -249,10 +249,10 @@ const Footer = () => {
             <ul className="space-y-2 text-sm text-gray-400">
               {['About Us', 'Contact Us', 'Terms & Conditions', 'Privacy Policy', 'FAQs'].map((item) => (
                 <li key={item}>
-                  <Link href="#" className="hover:text-[#00ADB5] transition-colors flex items-center gap-2 justify-center md:justify-start">
+                  {/* <Link href="#" className="hover:text-[#00ADB5] transition-colors flex items-center gap-2 justify-center md:justify-start"> */}
                     <span className="w-1.5 h-1.5 bg-[#00ADB5] rounded-full hidden md:block"></span>
                     {item}
-                  </Link>
+                  {/* </Link> */}
                 </li>
               ))}
             </ul>

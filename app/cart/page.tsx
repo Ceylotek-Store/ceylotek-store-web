@@ -7,8 +7,9 @@ import { useCart } from "@/context/CartContext";
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, cartTotal, totalItems } = useCart();
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const uploadsBackendUrl = process.env.NEXT_PUBLIC_UPLOADS_BACKEND_URL;
+  
+  // Get base URL for local images (fallback)
+  const uploadsBackendUrl = process.env.NEXT_PUBLIC_UPLOADS_BACKEND_URL || 'http://localhost:5000';
 
   if (cart.length === 0) {
     return (
@@ -33,14 +34,33 @@ export default function CartPage() {
           <div className="flex-grow">
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
               {cart.map((item) => {
-                 const imageUrl = uploadsBackendUrl && item.imageUrl ? `${uploadsBackendUrl}${item.imageUrl}` : '/placeholder.png';
+                 // --- LOGIC UPDATE START ---
+                 // Check if image URL is absolute (S3) or relative (Local)
+                 let imageUrl = '/placeholder.png';
+
+                 if (item.imageUrl) {
+                   if (item.imageUrl.startsWith('http')) {
+                     // Case 1: S3 URL
+                     imageUrl = item.imageUrl;
+                   } else {
+                     // Case 2: Local Upload
+                     imageUrl = `${uploadsBackendUrl}${item.imageUrl}`;
+                   }
+                 }
+                 // --- LOGIC UPDATE END ---
                  
                  return (
                   <div key={item.id} className="flex flex-col sm:flex-row items-center gap-4 p-6 border-b border-gray-100 last:border-0">
                     
                     {/* Image */}
                     <div className="relative w-24 h-24 flex-shrink-0 bg-gray-50 rounded-md overflow-hidden">
-                      <Image src={imageUrl} alt={item.name} fill className="object-contain p-2" unoptimized={true} />
+                      <Image 
+                        src={imageUrl} 
+                        alt={item.name} 
+                        fill 
+                        className="object-contain p-2" 
+                        unoptimized={true} // Allow S3 images without Next.js config changes (optional if config is set)
+                      />
                     </div>
 
                     {/* Details */}

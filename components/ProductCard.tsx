@@ -4,9 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { toast } from "react-hot-toast"; // Import toast
+import { toast } from "react-hot-toast";
 
-// 1. Define interface matching your Backend JSON structure
 export interface BackendProductType {
   id: number;
   name: string;
@@ -20,12 +19,23 @@ export interface BackendProductType {
 const ProductCard = ({ product }: { product: BackendProductType }) => {
   const { addToCart } = useCart();
   
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const uploadsBackendUrl = process.env.NEXT_PUBLIC_UPLOADS_BACKEND_URL;
+  // Get base URL for local images (fallback)
+  const uploadsBackendUrl = process.env.NEXT_PUBLIC_UPLOADS_BACKEND_URL || 'http://localhost:5000';
 
-  const fullImageUrl = backendUrl && product.imageUrl 
-    ? `${uploadsBackendUrl}${product.imageUrl}` 
-    : '/placeholder.png';
+  // --- LOGIC UPDATE START ---
+  // Check if image URL is absolute (S3) or relative (Local)
+  let fullImageUrl = '/placeholder.png';
+
+  if (product.imageUrl) {
+    if (product.imageUrl.startsWith('http')) {
+      // Case 1: S3 URL (Already full link)
+      fullImageUrl = product.imageUrl;
+    } else {
+      // Case 2: Local Upload (Needs backend prefix)
+      fullImageUrl = `${uploadsBackendUrl}${product.imageUrl}`;
+    }
+  }
+  // --- LOGIC UPDATE END ---
 
   const inStock = product.stock > 0;
   const numericPrice = parseFloat(product.price);
@@ -36,7 +46,6 @@ const ProductCard = ({ product }: { product: BackendProductType }) => {
     
     if (inStock) {
       addToCart(product);
-      // Trigger the popup notification
       toast.success(`${product.name} added to cart!`, {
         style: {
           background: '#333',
@@ -51,7 +60,6 @@ const ProductCard = ({ product }: { product: BackendProductType }) => {
   };
 
   return (
-    <Link href={`/products/${product.id}`} className="block h-full">
       <div className="group h-full bg-white border border-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col relative">
         
         <div className="relative w-full h-[250px] bg-gray-50 overflow-hidden">
@@ -66,7 +74,7 @@ const ProductCard = ({ product }: { product: BackendProductType }) => {
             alt={product.name} 
             fill 
             className="object-contain p-4 group-hover:scale-105 transition-transform duration-300" 
-            unoptimized={true}
+            // Removed unoptimized={true} to allow Next.js to optimize S3 images
           />
         </div>
 
@@ -96,13 +104,10 @@ const ProductCard = ({ product }: { product: BackendProductType }) => {
               Rs. {!isNaN(numericPrice) ? numericPrice.toLocaleString() : product.price}.00
             </div>
             
-             {/* ADDED: 'cursor-pointer' to the enabled classes.
-                The disabled state already has 'cursor-not-allowed'.
-             */}
              <button 
-                disabled={!inStock}
-                onClick={handleAddToCart}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${inStock ? "bg-[#393E46] text-white group-hover:bg-[#00ADB5] cursor-pointer" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+               disabled={!inStock}
+               onClick={handleAddToCart}
+               className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${inStock ? "bg-[#393E46] text-white group-hover:bg-[#00ADB5] cursor-pointer" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
              >
                  <ShoppingCart size={16} />
              </button>
@@ -110,7 +115,6 @@ const ProductCard = ({ product }: { product: BackendProductType }) => {
         </div>
 
       </div>
-    </Link>
   );
 };
 

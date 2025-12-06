@@ -36,6 +36,9 @@ export default function OrderStatusPage() {
   const [loading, setLoading] = useState(true);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
+  // Get base URL for local images (fallback)
+  const uploadsBackendUrl = process.env.NEXT_PUBLIC_UPLOADS_BACKEND_URL || 'http://localhost:5000';
+
   useEffect(() => {
     // Set window size for confetti
     setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -74,8 +77,6 @@ export default function OrderStatusPage() {
     );
   }
 
-  const uploadsBackendUrl = process.env.NEXT_PUBLIC_UPLOADS_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-
   return (
     <div className="min-h-screen relative bg-[#222831] py-6 md:py-12 flex items-center justify-center overflow-x-hidden">
       
@@ -86,12 +87,12 @@ export default function OrderStatusPage() {
       <div className="absolute inset-0 z-0 opacity-20">
          <div className="absolute inset-0 bg-gradient-to-b from-[#222831] to-transparent z-10"></div>
          <Image 
-            src="/order-status.png" 
-            alt="Background" 
-            fill 
-            className="object-cover"
-            priority
-            unoptimized={true}
+           src="/order-status.png" 
+           alt="Background" 
+           fill 
+           className="object-cover"
+           priority
+           unoptimized={true}
          />
       </div>
 
@@ -153,9 +154,16 @@ export default function OrderStatusPage() {
             </h3>
             
             {order.items.map((item) => {
-               const imageUrl = item.product.imageUrl.startsWith("http") 
-                  ? item.product.imageUrl 
-                  : `${uploadsBackendUrl}${item.product.imageUrl}`;
+               // --- LOGIC UPDATE START ---
+               let imageUrl = '/placeholder.png';
+               if (item.product.imageUrl) {
+                 if (item.product.imageUrl.startsWith("http")) {
+                   imageUrl = item.product.imageUrl; // S3
+                 } else {
+                   imageUrl = `${uploadsBackendUrl}${item.product.imageUrl}`; // Local
+                 }
+               }
+               // --- LOGIC UPDATE END ---
 
                return (
                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-100 rounded-lg hover:border-[#00ADB5]/30 transition-colors bg-white hover:shadow-sm gap-3">
