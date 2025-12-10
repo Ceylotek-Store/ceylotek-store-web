@@ -10,7 +10,7 @@ pipeline {
         NEXUS_VERSION = 'nexus3'
         NEXUS_PROTOCOL = 'http'
         NEXUS_URL = '172.31.64.132:8081' // REPLACE with your Nexus PRIVATE IP
-        NEXUS_REPO = 'ceylotek-npm-local'
+        NEXUS_REPO = 'ceylotek-builds',
         NEXUS_CREDENTIAL_ID = 'nexus-auth'
         
         // Define artifact details
