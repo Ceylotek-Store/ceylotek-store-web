@@ -72,6 +72,7 @@ const ProductCard = ({ product }: { product: BackendProductType }) => {
           <Image 
             src={fullImageUrl} 
             alt={product.name} 
+            unoptimized={true}
             fill 
             className="object-contain p-4 group-hover:scale-105 transition-transform duration-300" 
             // Removed unoptimized={true} to allow Next.js to optimize S3 images

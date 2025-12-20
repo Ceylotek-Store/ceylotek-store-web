@@ -1,11 +1,26 @@
 import ProductCard, { BackendProductType } from "@/components/ProductCard";
+// Option A: Import the helper if you created 'lib/api.ts'
+// import { getBaseUrl } from "@/lib/api"; 
 
-// 1. Helper function remains the same
+// Option B: Define helper locally (Use this if you haven't created the file yet)
+const getBaseUrl = () => {
+  if (typeof window === "undefined") {
+    // Server-Side (Docker) -> Talk to API Container directly
+    return "http://ceylotek-api:5000/api";
+  }
+  // Client-Side (Browser) -> Talk to Public URL (localhost)
+  return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api";
+};
+
+// 1. Helper function UPDATED
 async function getProducts(category?: string, search?: string): Promise<BackendProductType[]> {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  // ❌ OLD: const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  
+  // ✅ NEW: Use dynamic base URL
+  const backendUrl = getBaseUrl(); 
 
   if (!backendUrl) {
-    console.error("Backend URL not set in .env.local");
+    console.error("Backend URL could not be determined");
     return [];
   }
 
@@ -15,9 +30,12 @@ async function getProducts(category?: string, search?: string): Promise<BackendP
   if (category) params.append("category", category);
   if (search) params.append("search", search);
 
+  // Note: 'backendUrl' already includes '/api' from our helper logic, 
+  // but if your helper returns just the host, add '/api' here. 
+  // Based on my previous code, getBaseUrl() returns ".../api", so we append "/products".
   const url = `${backendUrl}/products?${params.toString()}`;
 
-  console.log(`fetching products from: ${url}`);
+  console.log(`[ProductsPage] Fetching from: ${url}`);
 
   try {
     const res = await fetch(url, {
@@ -30,7 +48,7 @@ async function getProducts(category?: string, search?: string): Promise<BackendP
 
     return res.json();
   } catch (error) {
-    console.error("Error fetching products:", error);
+    console.error("[ProductsPage] Error fetching products:", error);
     return [];
   }
 }

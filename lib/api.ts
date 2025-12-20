@@ -1,18 +1,29 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+// --- 1. DYNAMIC BASE URL STRATEGY ---
+// This function decides which URL to use based on where the code is running.
+const getBaseUrl = () => {
+  if (typeof window === "undefined") {
+    // 🖥️ SERVER-SIDE (Docker Container)
+    // We must talk directly to the API container via the Docker network
+    return "http://ceylotek-api:5000/api";
+  }
+  // 🌐 CLIENT-SIDE (Browser)
+  // We talk to the public URL (usually http://localhost/api via Nginx)
+  return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api";
+};
 
-// 1. PUBLIC CLIENT
+// 1. PUBLIC CLIENT (No Interceptors)
 export const publicApi = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getBaseUrl(), // <--- Uses the dynamic function
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// 2. PROTECTED CLIENT
+// 2. PROTECTED CLIENT (With Interceptors)
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getBaseUrl(), // <--- Uses the dynamic function
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -22,17 +33,24 @@ const api = axios.create({
 // --- REQUEST INTERCEPTOR ---
 api.interceptors.request.use(
   (config) => {
-    const storedUser = localStorage.getItem("ceylotek_user");
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser);
-        if (user?.token) {
-          config.headers.Authorization = `Bearer ${user.token}`;
+    // ⚠️ SAFETY CHECK: Only access localStorage in the browser
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem("ceylotek_user");
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          if (user?.token) {
+            config.headers.Authorization = `Bearer ${user.token}`;
+          }
+        } catch (error) {
+          console.error("Error parsing user token:", error);
         }
-      } catch (error) {
-        console.error("Error parsing user token:", error);
       }
     }
+    
+    // Ensure the baseURL is correct for every request (just in case)
+    config.baseURL = getBaseUrl();
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -44,19 +62,22 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // FIX 1: Check for BOTH 401 and 403
-    // Your backend sends 403 for invalid tokens, so we must catch it.
+    // Check for 401/403 and ensure we haven't retried already
     if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      // ⚠️ SAFETY CHECK: We can only auto-refresh efficiently in the browser
+      if (typeof window === 'undefined') {
+        return Promise.reject(error);
+      }
 
       try {
         console.log("🔄 [Interceptor] Token expired/invalid. Attempting refresh...");
 
-        // FIX 2: Add 'withCredentials: true'
-        // This is required to send the httpOnly cookie to the backend
+        // Use the public URL for refresh since this happens in the browser
         const { data } = await axios.get(
-          `${BASE_URL}/auth/refresh`, 
-          { withCredentials: true } // <--- CRITICAL FIX
+          `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost/api"}/auth/refresh`, 
+          { withCredentials: true }
         );
 
         console.log("✅ [Interceptor] Refresh success. New token received.");
@@ -69,8 +90,12 @@ api.interceptors.response.use(
           localStorage.setItem("ceylotek_user", JSON.stringify(user));
         }
 
-        // Update header and retry
+        // Update header and retry original request
         originalRequest.headers['Authorization'] = `Bearer ${data.accessToken}`;
+        
+        // Ensure retry uses the correct dynamic baseURL
+        originalRequest.baseURL = getBaseUrl();
+        
         return api(originalRequest);
 
       } catch (refreshError) {

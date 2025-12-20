@@ -1,26 +1,32 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // 1. Enables Docker to create a tiny, efficient production image
+  output: "standalone", 
+
   reactStrictMode: true,
+
   images: {
     remotePatterns: [
+      // --- AWS S3 (For Production) ---
       {
         protocol: 'https',
-        hostname: '**.s3.amazonaws.com', // Allow all S3 buckets (AWS)
+        hostname: '**.s3.amazonaws.com',
       },
-      {
-        protocol: 'https',
-        hostname: '**.s3.us-east-1.amazonaws.com', // Specific region fallback
-      },
-      {
-        protocol: 'http',
-        hostname: '192.168.56.20', // Allow Vagrant Backend
-      },
+      
+      // --- Local Development (Docker Port Forwarding) ---
+      // This allows Next.js to optimize images served from http://localhost:5000
       {
         protocol: 'http',
         hostname: 'localhost',
       },
+      
+      // --- Internal Docker Network (Optional but Recommended) ---
+      // If server-side Next.js tries to fetch an image directly from the container
+      {
+        protocol: 'http',
+        hostname: 'ceylotek-api',
+      }
     ],
   },
 };
